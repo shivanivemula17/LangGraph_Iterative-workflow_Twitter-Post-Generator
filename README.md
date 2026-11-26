@@ -1,105 +1,160 @@
-# Twitter (X) Post Generator: Iterative LangGraph Workflow
+# 🐦 LangGraph Iterative Workflow – Twitter Post Generator
 
-A learning project that uses **LangGraph** to generate, evaluate and rewrite tweets in a loop. It runs open-source Hugging Face models on your own computer. It creates draft text only and does not post to X.
+An LLM-powered Twitter/X post generation system built using **LangGraph** and **Hugging Face models**. This project uses an iterative workflow where an LLM generates a tweet, another LLM evaluates its quality, and an optimizer improves it based on the evaluation feedback.
 
-## How It Works
+The process repeats until the tweet is approved or the maximum iteration limit is reached.
 
-1. **Generate:** writes a tweet about your topic.
-2. **Evaluate:** reviews the tweet and gives feedback.
-3. **Optimize:** rewrites the tweet using that feedback.
+## 🚀 Project Overview
 
-The workflow stops when the tweet is approved or the iteration limit is reached.
+The application generates engaging and humorous Twitter/X posts based on a user-provided topic.
+
+Unlike a simple LLM-based generation system, this project follows an iterative approach:
+
+1. **Generate:** Create an initial tweet based on the given topic.
+2. **Evaluate:** Evaluate the tweet based on humor, originality, punchiness, relatability, and character limit.
+3. **Optimize:** Improve the tweet using the evaluator's feedback.
+4. **Repeat:** Send the improved tweet back for evaluation.
+5. **Stop:** End the workflow when the tweet is approved or the maximum number of iterations is reached.
+
+## 🏗️ Workflow Architecture
 
 ```mermaid
 flowchart TD
-    A([START]) --> B[Generate]
-    B --> C[Evaluate]
-    C -->|Approved or limit reached| D([END])
-    C -->|Needs improvement| E[Optimize]
-    E --> C
+    A([START]) --> B[Generate Tweet]
+    B --> C[Evaluate Tweet]
+    C --> D{Evaluation Result}
+    D -->|Approved| E([END])
+    D -->|Needs Improvement| F[Optimize Tweet]
+    F --> G[Increment Iteration]
+    G --> C
+    D -->|Max Iterations Reached| E
 ```
 
-## Models
+## 🧩 Workflow Components
 
-| Role | Model |
+| Component | Responsibility |
 |---|---|
-| Generator | `Qwen/Qwen2.5-0.5B-Instruct` |
-| Evaluator | `TinyLlama/TinyLlama-1.1B-Chat-v1.0` |
-| Optimizer | `HuggingFaceTB/SmolLM2-1.7B-Instruct` |
+| Generate Tweet | Generates an initial tweet based on the given topic. |
+| Evaluate Tweet | Evaluates the tweet and provides improvement feedback. |
+| Optimize Tweet | Rewrites the tweet using the evaluation feedback. |
+| Conditional Router | Decides whether to approve the tweet, optimize it, or stop. |
 
-## State
+## 🔄 Iterative Workflow Logic
 
-| Field | Description |
+The workflow follows a feedback loop:
+
+**Generate → Evaluate → Optimize → Evaluate → Repeat**
+
+- If the evaluation result is `approved`, the workflow terminates.
+- If the evaluation result is `needs_improvement`, the tweet is sent to the optimizer.
+- The iteration counter is incremented after every optimization.
+- If the maximum iteration limit is reached, the workflow terminates.
+
+## 🤖 Hugging Face Models
+
+This project uses locally hosted Hugging Face instruction-tuned models.
+
+| Model | Purpose |
 |---|---|
-| `topic` | Subject of the tweet |
-| `tweet` | Latest draft |
-| `evaluation` | `approved` or `needs_improvement` |
-| `feedback` | Latest evaluator reply |
-| `iteration` | Current iteration number |
-| `max_iteration` | Iteration limit |
-| `tweet_history` | All drafts |
-| `feedback_history` | All evaluator replies |
+| Qwen/Qwen2.5-0.5B-Instruct | Tweet generation and evaluation |
+| TinyLlama/TinyLlama-1.1B-Chat-v1.0 | Additional evaluator model configuration |
+| HuggingFaceTB/SmolLM2-1.7B-Instruct | Tweet optimization |
 
-The two history fields use `operator.add`, so new entries are added instead of replacing old ones.
+*Note: The model used for evaluation depends on the active model configuration in the implementation.*
 
-## Tech Stack
+## 🛠️ Technologies Used
 
-- Python (developed with 3.12)
+- Python
 - LangGraph
-- LangChain and `langchain-huggingface`
-- Hugging Face Transformers and PyTorch
-- Jupyter Notebook
+- LangChain
+- Hugging Face Transformers
+- HuggingFacePipeline
+- ChatHuggingFace
+- Pydantic
+- TypedDict
+- Local LLM Inference
 
-## Setup
+## 📂 Project Structure
 
-1. Install the dependencies:
-
-   ```bash
-   pip install langgraph langchain-core langchain-huggingface transformers torch pydantic python-dotenv ipykernel
-   ```
-
-2. Open `Twitter(X)_Post_Generator.ipynb` in VS Code or Jupyter.
-
-3. Run all cells in order.
-
-The models download on the first run, so you need an internet connection and enough disk space. All three are loaded into memory together.
-
-These models are public, so a Hugging Face token should not be required. If you use one, add it to a `.env` file as shown below, and do not commit that file.
-
-```env
-HF_TOKEN=your_token_here
+```text
+LangGraph_Iterative-workflow_Twitter-Post-Generator/
+│
+├── iterative_workflow.ipynb
+├── README.md
+└── .gitignore
 ```
 
-## Usage
+## ⚙️ Installation and Setup
 
-Set your topic and iteration limit in the last cell:
+### 1. Clone the Repository
 
-```python
-initial_state = {
-    "topic": "Indian Railways",
-    "iteration": 1,
-    "max_iteration": 2
-}
-
-for step in workflow.stream(initial_state, stream_mode="updates"):
-    print(step, flush=True)
+```bash
+git clone https://github.com/shivanivemula17/LangGraph_Iterative-workflow_Twitter-Post-Generator.git
 ```
 
-Each step's updates are printed when it finishes. A limit of `2` allows up to two evaluations and one rewrite.
+### 2. Navigate to the Project Directory
 
-## Limitations
+```bash
+cd LangGraph_Iterative-workflow_Twitter-Post-Generator
+```
 
-- The small models may ignore instructions, for example by using question-answer format or adding text in another language.
-- Evaluator feedback may be inaccurate or cut off at the 150-token limit.
-- Approval requires the evaluator to follow a specific first-line format. Otherwise, the result defaults to `needs_improvement`.
-- The optimizer may return the same tweet without changes.
-- The final tweet may be unapproved or longer than 280 characters if the workflow reaches its limit.
-- Running the models on a CPU may be slow.
+### 3. Install Dependencies
 
-## Future Improvements
+```bash
+pip install langgraph langchain langchain-core langchain-huggingface transformers torch pydantic python-dotenv
+```
 
-- Check tweet length and language rules in Python.
-- Make the evaluator's reply format more reliable.
-- Enable sampling for more varied drafts.
-- Try stronger models.
-- Add a simple user interface.
+### 4. Run the Notebook
+
+Open `iterative_workflow.ipynb` using Jupyter Notebook or VS Code and execute the cells.
+
+**Note:** The models are downloaded from Hugging Face when first loaded. Local inference requires sufficient RAM and processing resources.
+
+## 💡 Example
+
+**Input Topic:**
+
+```text
+Indian Railways
+```
+
+**Workflow Execution:**
+
+```text
+Iteration 1:
+    Generate Tweet
+        ↓
+    Evaluate Tweet
+        ↓
+    Needs Improvement
+        ↓
+    Optimize Tweet
+
+Iteration 2:
+    Evaluate Improved Tweet
+        ↓
+    Approved
+        ↓
+       END
+```
+
+**Final Output:**
+
+The workflow returns the final tweet along with its evaluation result, feedback, and iteration count.
+
+## 🎯 Key LangGraph Concepts Demonstrated
+
+- StateGraph
+- TypedDict for workflow state management
+- Nodes and Edges
+- START and END
+- Conditional Edges
+- LLM-based Evaluation
+- Feedback-driven Optimization
+- Iterative Workflows
+- Looping and Termination Conditions
+- Multi-LLM Integration
+
+---
+
+⭐ **Learning LangGraph through practical LLM-based workflow development.**
